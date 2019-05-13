@@ -78,10 +78,26 @@ def saveChartToPDF(data, filename, short):
     print("Saving graph to", jpgfile)
     date = [parser.parse(i[0]) for i in data]
     sumHL = [float(i[2]) for i in data]
+    K = [float(i[4]) for i in data]
     sma = getSMA(sumHL, SMAperiod)
-    plt.plot(date, sumHL, 'b.')
-    plt.plot(date, sma, 'r-')
-    plt.title("Sum HL in " + short[:6] + " SMA(" + str(SMAperiod) + ")")
+    Ksma = getSMA(K, SMAperiod)
+
+    fig, ax1 = plt.subplots()
+
+    plt.title(short[:6])
+
+    ax1.plot(date, sumHL, 'b.')
+    ax1.plot(date, sma, 'r-')
+    ax1.set_ylabel('Sum HL intraday + SMA(' + str(SMAperiod) + ')', color='b')
+    ax1.tick_params('y', colors='b')
+
+    ax2 = ax1.twinx()
+    ax2.plot(date, Ksma, 'y-')
+    ax2.set_ylabel('SumHL / DayHL SMA(' + str(SMAperiod) + ')', color='g')
+    ax2.tick_params('y', colors='g')
+
+    fig.tight_layout()
+
     plt.savefig(jpgfile)
     plt.close()
 # ------------------------------
@@ -133,5 +149,5 @@ def go():
 
 
 # ==============================
-if "__name__" == "__main__":
-    go()
+# if "__name__" == "__main__":
+go()
