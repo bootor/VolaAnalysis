@@ -1,7 +1,7 @@
 # > main.py
-# > main.py -b:2018.01.01 - data analysis from 01 january 2018
-# > main.py -e:2018.05.01 - data analysis to 01 may 2018
-# > main.py -t:AUDUSD+AUDNZD+NZDUSD - data analysis of AUDUSD, AUDNZD a,d NZDUSD
+# > main.py -b:2018.01.01 - all data analysis from 01 january 2018
+# > main.py -e:2018.05.01 - all data analysis to 01 may 2018
+# > main.py -t:AUDUSD+AUDNZD+NZDUSD - data analysis of AUDUSD, AUDNZD and NZDUSD for all time
 # > main.py -b:2015.01.01 -e:2018.10.01 -t:AUDNZD+AUDUSD+NZDUSD - data analysis from 2015.01.01 to 2018.10.01 of AUDNZD and AUDUSD and NZDUSD
 
 
