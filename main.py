@@ -1,8 +1,19 @@
+# > main.py
+# > main.py -b:2018.01.01 - data analysis from 01 january 2018
+# > main.py -e:2018.05.01 - data analysis to 01 may 2018
+# > main.py -t:AUDUSD+AUDNZD+NZDUSD - data analysis of AUDUSD, AUDNZD a,d NZDUSD
+# > main.py -b:2015.01.01 -e:2018.10.01 -t:AUDNZD+AUDUSD+NZDUSD - data analysis from 2015.01.01 to 2018.10.01 of AUDNZD and AUDUSD and NZDUSD
+
+
+# ==============================
+
+
 import os
 import datetime
 import csv
 from matplotlib import pyplot as plt
 from dateutil import parser
+import sys
 # ==============================
 
 
@@ -19,9 +30,9 @@ class Bar:
         separated = initstr.replace("\n", "").replace(',', '.').split(';')
         self.date = separated[0].split(' ')[0]
         self.date = self.date[6:] + '.' + self.date[3:5] + '.' + self.date[:2]
+        self.date = parser.parse(self.date)
         self.time = separated[0].split(' ')[1]
-        year, month, day = (int(x) for x in self.date.split('.'))
-        self.dayofweek = datetime.date(year, month, day).weekday() # 0 - Monday, 6 - Sunday
+        self.dayofweek = self.date.weekday() # 0 - Monday, 6 - Sunday
         self.open = float(separated[1])
         self.high = float(separated[2])
         self.low = float(separated[3])
@@ -38,25 +49,27 @@ def getDatafilesList(datadir):
         for filename in filenames:
             if '.csv' in filename:
                 fileslist.append(currdir + "\\" + datadir + "\\" + filename)
-                short.append(filename)
+                short.append(filename[:6])
     return fileslist, short
 # ------------------------------
 
 
-def loadBars(barsfile):
+def loadBars(barsfile, startdate, enddate):
     f = open(barsfile, 'r')
     bars = []
     line = f.readline()
     line = f.readline()
     while line != "":
-        bars.append(Bar(line))
+        bar = Bar(line)
+        if bar.date >= startdate and bar.date <= enddate:
+                bars.append(bar)
         line = f.readline()
     return bars
 # ------------------------------
 
 
-def saveOutFile(file, data):
-    outfile = file.replace(DATADIR, OUTDIR)
+def saveOutFile(ticker, data):
+    outfile = os.getcwd() + "\\" + OUTDIR + "\\" + ticker + "_" + data[1][0] + "-" + data[-1][0] + ".csv"
     print("Save data to file", outfile)
     with open(outfile, 'w', newline = "") as writeFile:
         writer = csv.writer(writeFile, delimiter = ";")
@@ -74,8 +87,8 @@ def getSMA(data, period):
 # ------------------------------
 
 
-def saveChartToPDF(data, filename, short):
-    jpgfile = filename.replace(DATADIR, OUTDIR).replace('csv', 'jpg')
+def saveChartToPDF(data, ticker):
+    jpgfile = os.getcwd() + "\\" + OUTDIR + "\\" + ticker + "_" + data[0][0] + "-" + data[-1][0] + ".jpg"
     print("Saving graph to", jpgfile)
     date = [parser.parse(i[0]) for i in data]
     sumHL = [float(i[2]) for i in data]
@@ -85,7 +98,7 @@ def saveChartToPDF(data, filename, short):
 
     fig, ax1 = plt.subplots()
 
-    plt.title(short[:6])
+    plt.title(ticker)
 
     ax1.plot(date, sumHL, 'b.')
     ax1.plot(date, sma, 'r-')
@@ -104,51 +117,75 @@ def saveChartToPDF(data, filename, short):
 # ------------------------------
 
 
-def go():
+def go(startdate, enddate, tickers):
     # load filenames with data
     files, short = getDatafilesList(DATADIR)
     # for file in files of data:
     for i in range(len(files)):
-        # load bardata
-        bars = loadBars(files[i])
-        print("Working with file", files[i])
-        # outdata
-        outdata = [["Date", "Day of week", "SumHL", "DayHL", "SumHL / DayHL"]]
-        # temp intraday variables
-        bar = bars[0]
-        sumHL = bar.high - bar.low
-        dayH = bar.high
-        dayL = bar.low
-        date = bar.date
-        day = bar.dayofweek
-        # for each bar in bardata:
-        for idx in range(1, len(bars)):
-            # if new day
-            if bars[idx].date != date and bars[idx - 1] != 6:
-                # save day data to file
-                outdata.append([bars[idx - 1].date, bars[idx - 1].dayofweek, "{0:.5f}".format(sumHL),
-                                "{0:.5f}".format(dayH - dayL), "{0:.5f}".format(sumHL / max(0.0001, (dayH - dayL)))])
-                sumHL = bars[idx].high - bars[idx].low
-                dayH = bars[idx].high
-                dayL = bars[idx].low
-                date = bars[idx].date
-                day = bars[idx].dayofweek
-            else:
-                # calculate summ of each bar's HL of each day
-                sumHL += bars[idx].high - bars[idx].low
-                # calculate HL of the day
-                if bars[idx].high > dayH:
+        # is datafile with nesessary ticker
+        needed = False
+        if len(tickers) == 0:
+            needed = True
+        else:
+            for ticker in tickers:
+                if ticker == short[i]:
+                    needed = True
+        if needed:
+            print("Working with file", short[i])
+            # load bardata
+            print("Loading bar data...")
+            bars = loadBars(files[i], startdate, enddate)
+            # outdata
+            outdata = [["Date", "Day of week", "SumHL", "DayHL", "SumHL / DayHL"]]
+            # temp intraday variables
+            bar = bars[0]
+            sumHL = bar.high - bar.low
+            dayH = bar.high
+            dayL = bar.low
+            date = bar.date
+            day = bar.dayofweek
+            # for each bar in bardata:
+            for idx in range(1, len(bars)):
+                # if new day
+                if bars[idx].date != date and bars[idx - 1] != 6:
+                    # save day data to file
+                    outdata.append([bars[idx - 1].date.strftime("%Y.%m.%d"), bars[idx - 1].dayofweek, "{0:.5f}".format(sumHL),
+                                    "{0:.5f}".format(dayH - dayL), "{0:.5f}".format(sumHL / max(0.0001, (dayH - dayL)))])
+                    sumHL = bars[idx].high - bars[idx].low
                     dayH = bars[idx].high
-                if bars[idx].low < dayL:
                     dayL = bars[idx].low
-                # update date and dayofweek (what if monday...)
-                date = bars[idx].date
-                day = bars[idx].dayofweek
-        # save outfile
-        saveOutFile(files[i], outdata)
-        saveChartToPDF(outdata[1:], files[i], short[i])
+                    date = bars[idx].date
+                    day = bars[idx].dayofweek
+                else:
+                    # calculate summ of each bar's HL of each day
+                    sumHL += bars[idx].high - bars[idx].low
+                    # calculate HL of the day
+                    if bars[idx].high > dayH:
+                        dayH = bars[idx].high
+                    if bars[idx].low < dayL:
+                        dayL = bars[idx].low
+                    # update date and dayofweek (what if monday...)
+                    date = bars[idx].date
+                    day = bars[idx].dayofweek
+            # save outfile
+            saveOutFile(short[i], outdata)
+            saveChartToPDF(outdata[1:], short[i])
+        else:
+            print(short[i], "is not needed...")
 
 
 # ==============================
-# if "__name__" == "__main__":
-go()
+if __name__ == "__main__":
+    params = sys.argv
+    startdate = parser.parse("1970.01.01")
+    enddate = datetime.datetime.now()
+    tickers = []
+    if len(params) > 1:
+        for idx in range(1, len(params)):
+            if params[idx][:2] == "-b":
+                startdate = parser.parse(params[idx][3:])
+            if params[idx][:2] == "-e":
+                enddate = parser.parse(params[idx][3:])
+            if params[idx][:2] == "-t":
+                tickers = params[idx][3:].split("+")
+    go(startdate, enddate, tickers)
